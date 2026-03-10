@@ -27,14 +27,6 @@ export class PromptRailsApi implements ICredentialType {
 			default: '',
 			description: 'Your PromptRails API key (starts with pr_key_)',
 		},
-		{
-			displayName: 'Workspace ID',
-			name: 'workspaceId',
-			type: 'string',
-			required: true,
-			default: '',
-			description: 'The workspace ID to operate on',
-		},
 	];
 
 	authenticate: IAuthenticateGeneric = {
@@ -42,7 +34,6 @@ export class PromptRailsApi implements ICredentialType {
 		properties: {
 			headers: {
 				Authorization: '=Bearer {{$credentials.apiKey}}',
-				'X-Workspace-ID': '={{$credentials.workspaceId}}',
 			},
 		},
 	};
