@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts
+!gulpfile.js
+!index.js
+.tsbuildinfo

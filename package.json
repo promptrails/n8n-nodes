@@ -1,0 +1,53 @@
+{
+	"name": "@promptrails/n8n-nodes-promptrails",
+	"version": "0.1.0",
+	"description": "PromptRails nodes for n8n — execute agents, run prompts, manage chat sessions, and more",
+	"keywords": [
+		"n8n-community-node-package"
+	],
+	"license": "MIT",
+	"homepage": "https://promptrails.com",
+	"author": {
+		"name": "PromptRails",
+		"email": "support@promptrails.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/promptrails/n8n-nodes-promptrails.git"
+	},
+	"engines": {
+		"node": ">=20.15"
+	},
+	"main": "index.js",
+	"scripts": {
+		"build": "npx rimraf dist && tsc && gulp build:icons",
+		"dev": "tsc --watch",
+		"format": "prettier \"nodes/**/*.ts\" \"credentials/**/*.ts\" --write",
+		"lint": "eslint --ext .ts nodes credentials && eslint package.json",
+		"lintfix": "eslint --ext .ts nodes credentials --fix && eslint package.json --fix",
+		"prepublishOnly": "npm run build && npm run lint"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"credentials": [
+			"dist/credentials/PromptRailsApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/PromptRails/PromptRails.node.js"
+		]
+	},
+	"devDependencies": {
+		"@typescript-eslint/parser": "~8.32.0",
+		"eslint": "^8.57.0",
+		"eslint-plugin-n8n-nodes-base": "^1.16.3",
+		"gulp": "^5.0.0",
+		"prettier": "^3.5.3",
+		"typescript": "^5.8.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}
