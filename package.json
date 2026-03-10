@@ -16,7 +16,7 @@
 		"url": "https://github.com/promptrails/n8n-nodes-promptrails.git"
 	},
 	"engines": {
-		"node": ">=20.15"
+		"node": ">=22.0"
 	},
 	"main": "index.js",
 	"scripts": {
