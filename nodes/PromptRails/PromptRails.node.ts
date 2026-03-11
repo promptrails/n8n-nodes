@@ -304,6 +304,95 @@ const costOperations: INodePropertyOptions[] = [
 	},
 ];
 
+const mediaStudioOperations: INodePropertyOptions[] = [
+	{
+		name: 'Generate',
+		value: 'generate',
+		action: 'Generate media',
+		description: 'Generate media using a provider model',
+		routing: {
+			request: {
+				method: 'POST',
+				url: '/api/v1/media/generate',
+				body: {
+					provider: '={{$parameter["provider"]}}',
+					media_type: '={{$parameter["mediaType"]}}',
+					model: '={{$parameter["model"]}}',
+					prompt: '={{$parameter["prompt"]}}',
+					input_url: '={{$parameter["inputUrl"] || undefined}}',
+					config: '={{$parameter["config"] ? JSON.parse($parameter["config"]) : undefined}}',
+				},
+			},
+		},
+	},
+];
+
+const assetOperations: INodePropertyOptions[] = [
+	{
+		name: 'Delete',
+		value: 'delete',
+		action: 'Delete an asset',
+		description: 'Delete an asset by ID',
+		routing: {
+			request: {
+				method: 'DELETE',
+				url: '=/api/v1/assets/{{$parameter["assetId"]}}',
+			},
+		},
+	},
+	{
+		name: 'Get',
+		value: 'get',
+		action: 'Get an asset',
+		description: 'Retrieve an asset by ID',
+		routing: {
+			request: {
+				method: 'GET',
+				url: '=/api/v1/assets/{{$parameter["assetId"]}}',
+			},
+		},
+	},
+	{
+		name: 'Get Many',
+		value: 'getMany',
+		action: 'List assets',
+		description: 'Retrieve a list of assets',
+		routing: {
+			request: {
+				method: 'GET',
+				url: '/api/v1/assets',
+			},
+		},
+	},
+	{
+		name: 'Get Signed URL',
+		value: 'getSignedUrl',
+		action: 'Get a signed URL for an asset',
+		description: 'Retrieve a signed download URL for an asset',
+		routing: {
+			request: {
+				method: 'GET',
+				url: '=/api/v1/assets/{{$parameter["assetId"]}}/signed-url',
+			},
+		},
+	},
+];
+
+const mediaModelOperations: INodePropertyOptions[] = [
+	{
+		name: 'Get Many',
+		value: 'getMany',
+		action: 'List media models',
+		description: 'Retrieve a list of available media models',
+		routing: {
+			request: {
+				method: 'GET',
+				url: '/api/v1/media-models',
+			},
+		},
+	},
+];
+
 export class PromptRails implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'PromptRails',
@@ -339,10 +428,13 @@ export class PromptRails implements INodeType {
 				noDataExpression: true,
 				options: [
 					{ name: 'Agent', value: 'agent' },
+					{ name: 'Asset', value: 'asset' },
 					{ name: 'Chat', value: 'chat' },
 					{ name: 'Cost', value: 'cost' },
 					{ name: 'Data Source', value: 'dataSource' },
 					{ name: 'Execution', value: 'execution' },
+					{ name: 'Media Model', value: 'mediaModel' },
+					{ name: 'Media Studio', value: 'mediaStudio' },
 					{ name: 'Prompt', value: 'prompt' },
 					{ name: 'Trace', value: 'trace' },
 				],
@@ -412,6 +504,33 @@ export class PromptRails implements INodeType {
 				displayOptions: { show: { resource: ['cost'] } },
 				options: costOperations,
 				default: 'workspaceSummary',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['mediaStudio'] } },
+				options: mediaStudioOperations,
+				default: 'generate',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['asset'] } },
+				options: assetOperations,
+				default: 'getMany',
+			},
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['mediaModel'] } },
+				options: mediaModelOperations,
+				default: 'getMany',
 			},
 
 			// ------ Agent fields ------
@@ -609,6 +728,272 @@ export class PromptRails implements INodeType {
 					show: {
 						resource: ['cost'],
 						operation: ['agentSummary'],
+					},
+				},
+			},
+
+			// ------ Media Studio fields ------
+			{
+				displayName: 'Provider',
+				name: 'provider',
+				type: 'options',
+				required: true,
+				default: '',
+				description: 'The media provider to use',
+				options: [
+					{ name: 'Deepgram', value: 'deepgram' },
+					{ name: 'ElevenLabs', value: 'elevenlabs' },
+					{ name: 'Fal', value: 'fal' },
+					{ name: 'Replicate', value: 'replicate' },
+					{ name: 'Runway', value: 'runway' },
+					{ name: 'Stability', value: 'stability' },
+				],
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+			{
+				displayName: 'Media Type',
+				name: 'mediaType',
+				type: 'options',
+				required: true,
+				default: '',
+				description: 'The type of media to generate',
+				options: [
+					{ name: 'Image Edit', value: 'image_edit' },
+					{ name: 'Image Generation', value: 'image_gen' },
+					{ name: 'Speech to Text', value: 'stt' },
+					{ name: 'Text to Speech', value: 'tts' },
+					{ name: 'Video from Image', value: 'video_from_img' },
+					{ name: 'Video Generation', value: 'video_gen' },
+				],
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+			{
+				displayName: 'Model',
+				name: 'model',
+				type: 'string',
+				required: true,
+				default: '',
+				description: 'The model identifier to use',
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+			{
+				displayName: 'Prompt',
+				name: 'prompt',
+				type: 'string',
+				typeOptions: {
+					rows: 4,
+				},
+				required: true,
+				default: '',
+				description: 'The prompt for media generation',
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+			{
+				displayName: 'Input URL',
+				name: 'inputUrl',
+				type: 'string',
+				default: '',
+				description: 'URL of the input media file (optional, for edits or transformations)',
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+			{
+				displayName: 'Config (JSON)',
+				name: 'config',
+				type: 'json',
+				default: '',
+				description: 'Additional configuration as a JSON object (optional)',
+				displayOptions: {
+					show: {
+						resource: ['mediaStudio'],
+						operation: ['generate'],
+					},
+				},
+			},
+
+			// ------ Asset fields ------
+			{
+				displayName: 'Asset ID',
+				name: 'assetId',
+				type: 'string',
+				required: true,
+				default: '',
+				description: 'The ID of the asset',
+				displayOptions: {
+					show: {
+						resource: ['asset'],
+						operation: ['get', 'delete', 'getSignedUrl'],
+					},
+				},
+			},
+			{
+				displayName: 'Type',
+				name: 'assetType',
+				type: 'string',
+				default: '',
+				description: 'Filter assets by type (e.g. image, audio, video)',
+				displayOptions: {
+					show: {
+						resource: ['asset'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							type: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+			{
+				displayName: 'Provider',
+				name: 'assetProvider',
+				type: 'string',
+				default: '',
+				description: 'Filter assets by provider',
+				displayOptions: {
+					show: {
+						resource: ['asset'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							provider: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+			{
+				displayName: 'Execution ID',
+				name: 'assetExecutionId',
+				type: 'string',
+				default: '',
+				description: 'Filter assets by execution ID',
+				displayOptions: {
+					show: {
+						resource: ['asset'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							execution_id: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+			{
+				displayName: 'Agent ID',
+				name: 'assetAgentId',
+				type: 'string',
+				default: '',
+				description: 'Filter assets by agent ID',
+				displayOptions: {
+					show: {
+						resource: ['asset'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							agent_id: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+
+			// ------ Media Model fields ------
+			{
+				displayName: 'Provider',
+				name: 'mediaModelProvider',
+				type: 'string',
+				default: '',
+				description: 'Filter media models by provider',
+				displayOptions: {
+					show: {
+						resource: ['mediaModel'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							provider: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+			{
+				displayName: 'Media Type',
+				name: 'mediaModelMediaType',
+				type: 'string',
+				default: '',
+				description: 'Filter media models by media type (e.g. tts, stt, image_gen)',
+				displayOptions: {
+					show: {
+						resource: ['mediaModel'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							media_type: '={{$value || undefined}}',
+						},
+					},
+				},
+			},
+			{
+				displayName: 'Is Active',
+				name: 'mediaModelIsActive',
+				type: 'options',
+				default: '',
+				description: 'Filter media models by active status',
+				options: [
+					{ name: 'All', value: '' },
+					{ name: 'Active', value: 'true' },
+					{ name: 'Inactive', value: 'false' },
+				],
+				displayOptions: {
+					show: {
+						resource: ['mediaModel'],
+						operation: ['getMany'],
+					},
+				},
+				routing: {
+					request: {
+						qs: {
+							is_active: '={{$value || undefined}}',
+						},
 					},
 				},
 			},
