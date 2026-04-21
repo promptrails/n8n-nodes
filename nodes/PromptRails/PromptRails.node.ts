@@ -1,4 +1,18 @@
-import { INodeType, INodeTypeDescription, INodePropertyOptions } from 'n8n-workflow';
+import {
+	IDataObject,
+	IExecuteFunctions,
+	INodeExecutionData,
+	INodeType,
+	INodeTypeDescription,
+	INodePropertyOptions,
+	NodeOperationError,
+} from 'n8n-workflow';
+import { PromptRails as PromptRailsClient } from '@promptrails/sdk';
+
+// === Operation option groups =============================================
+// These drive the UX (which operations show up per resource). The node
+// dispatches on resource + operation inside execute() below — no n8n
+// declarative routing is used.
 
 const agentOperations: INodePropertyOptions[] = [
 	{
@@ -6,97 +20,35 @@ const agentOperations: INodePropertyOptions[] = [
 		value: 'execute',
 		action: 'Execute an agent',
 		description: 'Execute an agent with input variables',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '=/api/v1/agents/{{$parameter["agentId"]}}/execute',
-				body: {
-					variables: '={{JSON.parse($parameter["variables"] || "{}")}}',
-				},
-			},
-		},
 	},
-	{
-		name: 'Get',
-		value: 'get',
-		action: 'Get an agent',
-		description: 'Retrieve an agent by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/agents/{{$parameter["agentId"]}}',
-			},
-		},
-	},
+	{ name: 'Get', value: 'get', action: 'Get an agent', description: 'Retrieve an agent by ID' },
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List agents',
 		description: 'Retrieve a list of agents',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/agents',
-			},
-		},
 	},
 	{
 		name: 'Preview',
 		value: 'preview',
 		action: 'Preview an agent',
 		description: 'Preview an agent with a specific version',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '=/api/v1/agents/{{$parameter["agentId"]}}/preview',
-				body: {
-					variables: '={{JSON.parse($parameter["variables"] || "{}")}}',
-					version_id: '={{$parameter["versionId"] || undefined}}',
-				},
-			},
-		},
 	},
 ];
 
 const promptOperations: INodePropertyOptions[] = [
-	{
-		name: 'Get',
-		value: 'get',
-		action: 'Get a prompt',
-		description: 'Retrieve a prompt by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/prompts/{{$parameter["promptId"]}}',
-			},
-		},
-	},
+	{ name: 'Get', value: 'get', action: 'Get a prompt', description: 'Retrieve a prompt by ID' },
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List prompts',
 		description: 'Retrieve a list of prompts',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/prompts',
-			},
-		},
 	},
 	{
 		name: 'Run',
 		value: 'run',
 		action: 'Run a prompt',
-		description: 'Execute a prompt with variables',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '=/api/v1/prompts/{{$parameter["promptId"]}}/run',
-				body: {
-					variables: '={{JSON.parse($parameter["variables"] || "{}")}}',
-				},
-			},
-		},
+		description: 'Render and run a prompt template with variables',
 	},
 ];
 
@@ -105,67 +57,31 @@ const chatOperations: INodePropertyOptions[] = [
 		name: 'Create Session',
 		value: 'createSession',
 		action: 'Create a chat session',
-		description: 'Create a new chat session for an agent',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '/api/v1/chat/sessions',
-				body: {
-					agent_id: '={{$parameter["agentId"]}}',
-				},
-			},
-		},
+		description: 'Start a new chat session for an agent',
 	},
 	{
 		name: 'Get Session',
 		value: 'getSession',
 		action: 'Get a chat session',
 		description: 'Retrieve a chat session by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/chat/sessions/{{$parameter["sessionId"]}}',
-			},
-		},
 	},
 	{
 		name: 'List Messages',
 		value: 'listMessages',
-		action: 'List chat messages',
-		description: 'Retrieve messages from a chat session',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/chat/sessions/{{$parameter["sessionId"]}}/messages',
-			},
-		},
+		action: 'List messages',
+		description: 'List messages in a chat session',
 	},
 	{
 		name: 'List Sessions',
 		value: 'listSessions',
 		action: 'List chat sessions',
-		description: 'Retrieve a list of chat sessions',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/chat/sessions',
-			},
-		},
+		description: 'Retrieve chat sessions',
 	},
 	{
 		name: 'Send Message',
 		value: 'sendMessage',
 		action: 'Send a chat message',
-		description: 'Send a message in a chat session',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '=/api/v1/chat/sessions/{{$parameter["sessionId"]}}/messages',
-				body: {
-					message: '={{$parameter["message"]}}',
-				},
-			},
-		},
+		description: 'Send a message to a chat session',
 	},
 ];
 
@@ -175,24 +91,12 @@ const executionOperations: INodePropertyOptions[] = [
 		value: 'get',
 		action: 'Get an execution',
 		description: 'Retrieve an execution by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/executions/{{$parameter["executionId"]}}',
-			},
-		},
 	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List executions',
 		description: 'Retrieve a list of executions',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/executions',
-			},
-		},
 	},
 ];
 
@@ -202,105 +106,43 @@ const dataSourceOperations: INodePropertyOptions[] = [
 		value: 'get',
 		action: 'Get a data source',
 		description: 'Retrieve a data source by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/data-sources/{{$parameter["dataSourceId"]}}',
-			},
-		},
 	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List data sources',
 		description: 'Retrieve a list of data sources',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/data-sources',
-			},
-		},
 	},
 	{
 		name: 'Query',
 		value: 'query',
 		action: 'Query a data source',
 		description: 'Execute a query against a data source',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '=/api/v1/data-sources/{{$parameter["dataSourceId"]}}/query',
-				body: {
-					query: '={{$parameter["query"]}}',
-				},
-			},
-		},
 	},
 ];
 
 const traceOperations: INodePropertyOptions[] = [
-	{
-		name: 'Get',
-		value: 'get',
-		action: 'Get a trace',
-		description: 'Retrieve a trace by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/traces/{{$parameter["traceId"]}}',
-			},
-		},
-	},
+	{ name: 'Get', value: 'get', action: 'Get a trace', description: 'Retrieve a trace by trace ID' },
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List traces',
 		description: 'Retrieve a list of traces',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/traces',
-			},
-		},
-	},
-	{
-		name: 'Get Summary',
-		value: 'getSummary',
-		action: 'Get trace summary',
-		description: 'Retrieve a summary of traces',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/traces/summary',
-			},
-		},
 	},
 ];
 
 const costOperations: INodePropertyOptions[] = [
 	{
-		name: 'Get Agent Summary',
+		name: 'Agent Summary',
 		value: 'agentSummary',
 		action: 'Get agent cost summary',
-		description: 'Retrieve cost summary for a specific agent',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/costs/agents/{{$parameter["agentId"]}}',
-			},
-		},
+		description: 'Cost breakdown for a specific agent',
 	},
 	{
-		name: 'Get Workspace Summary',
+		name: 'Workspace Summary',
 		value: 'workspaceSummary',
 		action: 'Get workspace cost summary',
-		description: 'Retrieve cost summary for the workspace',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/costs/summary',
-			},
-		},
+		description: 'Total LLM usage costs for the workspace',
 	},
 ];
 
@@ -309,21 +151,7 @@ const mediaStudioOperations: INodePropertyOptions[] = [
 		name: 'Generate',
 		value: 'generate',
 		action: 'Generate media',
-		description: 'Generate media using a provider model',
-		routing: {
-			request: {
-				method: 'POST',
-				url: '/api/v1/media/generate',
-				body: {
-					provider: '={{$parameter["provider"]}}',
-					media_type: '={{$parameter["mediaType"]}}',
-					model: '={{$parameter["model"]}}',
-					prompt: '={{$parameter["prompt"]}}',
-					input_url: '={{$parameter["inputUrl"] || undefined}}',
-					config: '={{$parameter["config"] ? JSON.parse($parameter["config"]) : undefined}}',
-				},
-			},
-		},
+		description: 'Run a media generation request',
 	},
 ];
 
@@ -332,49 +160,20 @@ const assetOperations: INodePropertyOptions[] = [
 		name: 'Delete',
 		value: 'delete',
 		action: 'Delete an asset',
-		description: 'Delete an asset by ID',
-		routing: {
-			request: {
-				method: 'DELETE',
-				url: '=/api/v1/assets/{{$parameter["assetId"]}}',
-			},
-		},
+		description: 'Permanently delete an asset',
 	},
-	{
-		name: 'Get',
-		value: 'get',
-		action: 'Get an asset',
-		description: 'Retrieve an asset by ID',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/assets/{{$parameter["assetId"]}}',
-			},
-		},
-	},
+	{ name: 'Get', value: 'get', action: 'Get an asset', description: 'Retrieve an asset by ID' },
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List assets',
 		description: 'Retrieve a list of assets',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/assets',
-			},
-		},
 	},
 	{
 		name: 'Get Signed URL',
 		value: 'getSignedUrl',
-		action: 'Get a signed URL for an asset',
-		description: 'Retrieve a signed download URL for an asset',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '=/api/v1/assets/{{$parameter["assetId"]}}/signed-url',
-			},
-		},
+		action: 'Get a signed URL',
+		description: 'Generate a time-limited download URL for an asset',
 	},
 ];
 
@@ -383,15 +182,11 @@ const mediaModelOperations: INodePropertyOptions[] = [
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List media models',
-		description: 'Retrieve a list of available media models',
-		routing: {
-			request: {
-				method: 'GET',
-				url: '/api/v1/media-models',
-			},
-		},
+		description: 'Retrieve a list of media models',
 	},
 ];
+
+// === Node =================================================================
 
 export class PromptRails implements INodeType {
 	description: INodeTypeDescription = {
@@ -413,12 +208,6 @@ export class PromptRails implements INodeType {
 				required: true,
 			},
 		],
-		requestDefaults: {
-			baseURL: '={{$credentials.host}}',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-		},
 		properties: [
 			// ------ Resource ------
 			{
@@ -637,9 +426,7 @@ export class PromptRails implements INodeType {
 				displayName: 'Message',
 				name: 'message',
 				type: 'string',
-				typeOptions: {
-					rows: 4,
-				},
+				typeOptions: { rows: 4 },
 				required: true,
 				default: '',
 				description: 'The message to send',
@@ -683,15 +470,11 @@ export class PromptRails implements INodeType {
 				},
 			},
 			{
-				displayName: 'Query',
-				name: 'query',
-				type: 'string',
-				typeOptions: {
-					rows: 4,
-				},
-				required: true,
-				default: '',
-				description: 'The query to execute against the data source',
+				displayName: 'Query Parameters (JSON)',
+				name: 'queryParameters',
+				type: 'json',
+				default: '{}',
+				description: 'Parameters passed to the data source query as a JSON object',
 				displayOptions: {
 					show: {
 						resource: ['dataSource'],
@@ -795,9 +578,7 @@ export class PromptRails implements INodeType {
 				displayName: 'Prompt',
 				name: 'prompt',
 				type: 'string',
-				typeOptions: {
-					rows: 4,
-				},
+				typeOptions: { rows: 4 },
 				required: true,
 				default: '',
 				description: 'The prompt for media generation',
@@ -862,13 +643,6 @@ export class PromptRails implements INodeType {
 						operation: ['getMany'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							type: '={{$value || undefined}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Provider',
@@ -880,13 +654,6 @@ export class PromptRails implements INodeType {
 					show: {
 						resource: ['asset'],
 						operation: ['getMany'],
-					},
-				},
-				routing: {
-					request: {
-						qs: {
-							provider: '={{$value || undefined}}',
-						},
 					},
 				},
 			},
@@ -902,13 +669,6 @@ export class PromptRails implements INodeType {
 						operation: ['getMany'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							execution_id: '={{$value || undefined}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Agent ID',
@@ -920,13 +680,6 @@ export class PromptRails implements INodeType {
 					show: {
 						resource: ['asset'],
 						operation: ['getMany'],
-					},
-				},
-				routing: {
-					request: {
-						qs: {
-							agent_id: '={{$value || undefined}}',
-						},
 					},
 				},
 			},
@@ -944,13 +697,6 @@ export class PromptRails implements INodeType {
 						operation: ['getMany'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							provider: '={{$value || undefined}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Media Type',
@@ -962,13 +708,6 @@ export class PromptRails implements INodeType {
 					show: {
 						resource: ['mediaModel'],
 						operation: ['getMany'],
-					},
-				},
-				routing: {
-					request: {
-						qs: {
-							media_type: '={{$value || undefined}}',
-						},
 					},
 				},
 			},
@@ -989,13 +728,6 @@ export class PromptRails implements INodeType {
 						operation: ['getMany'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							is_active: '={{$value || undefined}}',
-						},
-					},
-				},
 			},
 
 			// ------ Pagination (shared) ------
@@ -1014,13 +746,6 @@ export class PromptRails implements INodeType {
 						operation: ['getMany', 'listSessions', 'listMessages'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							limit: '={{$value}}',
-						},
-					},
-				},
 			},
 			{
 				displayName: 'Page',
@@ -1036,14 +761,373 @@ export class PromptRails implements INodeType {
 						operation: ['getMany', 'listSessions', 'listMessages'],
 					},
 				},
-				routing: {
-					request: {
-						qs: {
-							page: '={{$value}}',
-						},
-					},
-				},
 			},
 		],
 	};
+
+	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
+		const credentials = await this.getCredentials('promptRailsApi');
+		const client = new PromptRailsClient({
+			apiKey: credentials.apiKey as string,
+			baseUrl: credentials.host as string,
+		});
+
+		const items = this.getInputData();
+		const returnData: INodeExecutionData[] = [];
+
+		for (let i = 0; i < items.length; i++) {
+			try {
+				const result = await dispatch(this, client, i);
+				pushResult(returnData, result, i);
+			} catch (err) {
+				if (this.continueOnFail()) {
+					returnData.push({
+						json: { error: (err as Error).message },
+						pairedItem: { item: i },
+					});
+					continue;
+				}
+				throw new NodeOperationError(this.getNode(), err as Error, { itemIndex: i });
+			}
+		}
+
+		return [returnData];
+	}
+}
+
+// === Dispatch ============================================================
+
+async function dispatch(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	i: number,
+): Promise<unknown> {
+	const resource = ctx.getNodeParameter('resource', i) as string;
+	const operation = ctx.getNodeParameter('operation', i) as string;
+
+	switch (resource) {
+		case 'agent':
+			return handleAgent(ctx, client, operation, i);
+		case 'prompt':
+			return handlePrompt(ctx, client, operation, i);
+		case 'chat':
+			return handleChat(ctx, client, operation, i);
+		case 'execution':
+			return handleExecution(ctx, client, operation, i);
+		case 'dataSource':
+			return handleDataSource(ctx, client, operation, i);
+		case 'trace':
+			return handleTrace(ctx, client, operation, i);
+		case 'cost':
+			return handleCost(ctx, client, operation, i);
+		case 'mediaStudio':
+			return handleMediaStudio(ctx, client, operation, i);
+		case 'asset':
+			return handleAsset(ctx, client, operation, i);
+		case 'mediaModel':
+			return handleMediaModel(ctx, client, operation, i);
+		default:
+			throw new Error(`unknown resource: ${resource}`);
+	}
+}
+
+// --- Parameter helpers ---------------------------------------------------
+
+function pagination(ctx: IExecuteFunctions, i: number): { page: number; limit: number } {
+	return {
+		page: ctx.getNodeParameter('page', i, 1) as number,
+		limit: ctx.getNodeParameter('limit', i, 20) as number,
+	};
+}
+
+function parseJson(value: unknown, field: string): Record<string, unknown> {
+	if (value === undefined || value === null || value === '') return {};
+	if (typeof value === 'object') return value as Record<string, unknown>;
+	if (typeof value !== 'string') {
+		throw new Error(`${field} must be a JSON object or string`);
+	}
+	try {
+		const parsed = JSON.parse(value);
+		if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+			throw new Error(`${field} must decode to a JSON object`);
+		}
+		return parsed as Record<string, unknown>;
+	} catch (err) {
+		throw new Error(`${field} is not valid JSON: ${(err as Error).message}`);
+	}
+}
+
+// --- Resource handlers ---------------------------------------------------
+
+async function handleAgent(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'execute': {
+			const agentId = ctx.getNodeParameter('agentId', i) as string;
+			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
+			return client.agents.execute(agentId, { input: variables, sync: true });
+		}
+		case 'preview': {
+			const agentId = ctx.getNodeParameter('agentId', i) as string;
+			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
+			const versionId = (ctx.getNodeParameter('versionId', i, '') as string) || undefined;
+			return client.agents.preview(agentId, { input: variables, version_id: versionId });
+		}
+		case 'get':
+			return client.agents.get(ctx.getNodeParameter('agentId', i) as string);
+		case 'getMany':
+			return client.agents.list(pagination(ctx, i));
+		default:
+			throw new Error(`unknown agent operation: ${op}`);
+	}
+}
+
+async function handlePrompt(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'get':
+			return client.prompts.get(ctx.getNodeParameter('promptId', i) as string);
+		case 'getMany':
+			return client.prompts.list(pagination(ctx, i));
+		case 'run': {
+			const promptId = ctx.getNodeParameter('promptId', i) as string;
+			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
+			// The backend renders the prompt from its stored body when
+			// user_prompt is left empty; variables feed Jinja.
+			return client.prompts.runPrompt(promptId, {
+				user_prompt: '',
+				llm_model_id: '',
+				input: variables,
+			});
+		}
+		default:
+			throw new Error(`unknown prompt operation: ${op}`);
+	}
+}
+
+async function handleChat(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'createSession': {
+			const agentId = ctx.getNodeParameter('agentId', i) as string;
+			return client.chat.createSession({ agent_id: agentId });
+		}
+		case 'getSession':
+			return client.chat.getSession(ctx.getNodeParameter('sessionId', i) as string);
+		case 'listSessions':
+			return client.chat.listSessions(pagination(ctx, i));
+		case 'listMessages': {
+			const sessionId = ctx.getNodeParameter('sessionId', i) as string;
+			return client.chat.listMessages(sessionId, pagination(ctx, i));
+		}
+		case 'sendMessage': {
+			const sessionId = ctx.getNodeParameter('sessionId', i) as string;
+			const content = ctx.getNodeParameter('message', i) as string;
+			return client.chat.sendMessage(sessionId, { content });
+		}
+		default:
+			throw new Error(`unknown chat operation: ${op}`);
+	}
+}
+
+async function handleExecution(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'get':
+			return client.executions.get(ctx.getNodeParameter('executionId', i) as string);
+		case 'getMany':
+			return client.executions.list(pagination(ctx, i));
+		default:
+			throw new Error(`unknown execution operation: ${op}`);
+	}
+}
+
+async function handleDataSource(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'get':
+			return client.dataSources.get(ctx.getNodeParameter('dataSourceId', i) as string);
+		case 'getMany':
+			return client.dataSources.list(pagination(ctx, i));
+		case 'query': {
+			const dsId = ctx.getNodeParameter('dataSourceId', i) as string;
+			const parameters = parseJson(
+				ctx.getNodeParameter('queryParameters', i, {}),
+				'Query Parameters',
+			);
+			return client.dataSources.query(dsId, parameters);
+		}
+		default:
+			throw new Error(`unknown data source operation: ${op}`);
+	}
+}
+
+async function handleTrace(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'get':
+			return client.traces.getByTraceId(ctx.getNodeParameter('traceId', i) as string);
+		case 'getMany':
+			return client.traces.list(pagination(ctx, i));
+		default:
+			throw new Error(`unknown trace operation: ${op}`);
+	}
+}
+
+async function handleCost(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'workspaceSummary':
+			return client.costs.getSummary();
+		case 'agentSummary':
+			return client.costs.getAgentSummary(ctx.getNodeParameter('agentId', i) as string);
+		default:
+			throw new Error(`unknown cost operation: ${op}`);
+	}
+}
+
+async function handleMediaStudio(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	if (op !== 'generate') {
+		throw new Error(`unknown media studio operation: ${op}`);
+	}
+	const provider = ctx.getNodeParameter('provider', i) as string;
+	const mediaType = ctx.getNodeParameter('mediaType', i) as string;
+	const model = ctx.getNodeParameter('model', i) as string;
+	const prompt = ctx.getNodeParameter('prompt', i) as string;
+	const inputUrl = (ctx.getNodeParameter('inputUrl', i, '') as string) || undefined;
+	const config = parseJson(ctx.getNodeParameter('config', i, {}), 'Config');
+	return client.media.generate({
+		provider,
+		media_type: mediaType,
+		model,
+		prompt,
+		input_url: inputUrl,
+		config,
+	});
+}
+
+async function handleAsset(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	switch (op) {
+		case 'get':
+			return client.assets.get(ctx.getNodeParameter('assetId', i) as string);
+		case 'getSignedUrl':
+			return client.assets.getSignedUrl(ctx.getNodeParameter('assetId', i) as string);
+		case 'delete': {
+			await client.assets.delete(ctx.getNodeParameter('assetId', i) as string);
+			return { success: true };
+		}
+		case 'getMany': {
+			const params: Record<string, unknown> = pagination(ctx, i);
+			const type = (ctx.getNodeParameter('assetType', i, '') as string) || '';
+			const provider = (ctx.getNodeParameter('assetProvider', i, '') as string) || '';
+			const executionId = (ctx.getNodeParameter('assetExecutionId', i, '') as string) || '';
+			const agentId = (ctx.getNodeParameter('assetAgentId', i, '') as string) || '';
+			if (type) params.type = type;
+			if (provider) params.provider = provider;
+			if (executionId) params.execution_id = executionId;
+			if (agentId) params.agent_id = agentId;
+			return client.assets.list(params as Parameters<typeof client.assets.list>[0]);
+		}
+		default:
+			throw new Error(`unknown asset operation: ${op}`);
+	}
+}
+
+async function handleMediaModel(
+	ctx: IExecuteFunctions,
+	client: PromptRailsClient,
+	op: string,
+	i: number,
+): Promise<unknown> {
+	if (op !== 'getMany') {
+		throw new Error(`unknown media model operation: ${op}`);
+	}
+	const params: Record<string, unknown> = pagination(ctx, i);
+	const provider = (ctx.getNodeParameter('mediaModelProvider', i, '') as string) || '';
+	const mediaType = (ctx.getNodeParameter('mediaModelMediaType', i, '') as string) || '';
+	const isActive = (ctx.getNodeParameter('mediaModelIsActive', i, '') as string) || '';
+	if (provider) params.provider = provider;
+	if (mediaType) params.media_type = mediaType;
+	if (isActive) params.is_active = isActive === 'true';
+	return client.mediaModels.list(params as Parameters<typeof client.mediaModels.list>[0]);
+}
+
+// === Output shaping ======================================================
+
+function pushResult(out: INodeExecutionData[], result: unknown, itemIndex: number): void {
+	if (result === undefined || result === null) {
+		out.push({ json: {}, pairedItem: { item: itemIndex } });
+		return;
+	}
+
+	// Paginated SDK responses have shape { data: T[], meta: {...} } — emit
+	// each row as its own output item so downstream nodes can iterate, and
+	// preserve meta on every row for pagination chaining.
+	if (typeof result === 'object' && result !== null && 'data' in result && 'meta' in result) {
+		const { data, meta } = result as { data: unknown; meta: unknown };
+		if (Array.isArray(data)) {
+			if (data.length === 0) {
+				out.push({ json: { meta } as IDataObject, pairedItem: { item: itemIndex } });
+				return;
+			}
+			for (const row of data) {
+				out.push({
+					json: { ...(row as IDataObject), meta } as IDataObject,
+					pairedItem: { item: itemIndex },
+				});
+			}
+			return;
+		}
+	}
+
+	if (Array.isArray(result)) {
+		if (result.length === 0) {
+			out.push({ json: {}, pairedItem: { item: itemIndex } });
+			return;
+		}
+		for (const row of result) {
+			out.push({ json: row as IDataObject, pairedItem: { item: itemIndex } });
+		}
+		return;
+	}
+
+	out.push({ json: result as IDataObject, pairedItem: { item: itemIndex } });
 }

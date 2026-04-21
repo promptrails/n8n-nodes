@@ -6,12 +6,12 @@
 	"resources": {
 		"credentialDocumentation": [
 			{
-				"url": "https://promptrails.com/docs/api-keys-and-scopes"
+				"url": "https://promptrails.ai/docs/api-keys-and-scopes"
 			}
 		],
 		"primaryDocumentation": [
 			{
-				"url": "https://promptrails.com/docs/rest-api-reference"
+				"url": "https://promptrails.ai/docs/rest-api-reference"
 			}
 		]
 	}

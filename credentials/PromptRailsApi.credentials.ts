@@ -8,14 +8,14 @@ import {
 export class PromptRailsApi implements ICredentialType {
 	name = 'promptRailsApi';
 	displayName = 'PromptRails API';
-	documentationUrl = 'https://promptrails.com/docs/api-keys-and-scopes';
+	documentationUrl = 'https://promptrails.ai/docs/api-keys-and-scopes';
 
 	properties: INodeProperties[] = [
 		{
 			displayName: 'Host URL',
 			name: 'host',
 			type: 'string',
-			default: 'https://api.promptrails.com',
+			default: 'https://api.promptrails.ai',
 			description: 'The base URL for the PromptRails API',
 		},
 		{

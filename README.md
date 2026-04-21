@@ -1,6 +1,6 @@
 # n8n-nodes-promptrails
 
-[n8n](https://n8n.io/) community node for [PromptRails](https://promptrails.com) — execute AI agents, run prompts, manage chat sessions, query data sources, and more from your n8n workflows.
+[n8n](https://n8n.io/) community node for [PromptRails](https://promptrails.ai) — execute AI agents, run prompts, manage chat sessions, query data sources, and more from your n8n workflows.
 
 ## Installation
 
@@ -15,7 +15,7 @@ In your n8n instance:
 
 You need a PromptRails API key to use this node:
 
-1. Log in to [PromptRails](https://promptrails.com)
+1. Log in to [PromptRails](https://promptrails.ai)
 2. Go to **Settings > API Keys**
 3. Create a new API key with the required scopes
 4. In n8n, create a new **PromptRails API** credential with your API key and workspace ID
@@ -29,7 +29,7 @@ You need a PromptRails API key to use this node:
 | **Chat** | Create Session, Send Message, Get Session, List Sessions, List Messages |
 | **Execution** | Get, List |
 | **Data Source** | Query, Get, List |
-| **Trace** | Get, List, Get Summary |
+| **Trace** | Get, List |
 | **Cost** | Workspace Summary, Agent Summary |
 
 ### Agent
@@ -68,7 +68,6 @@ You need a PromptRails API key to use this node:
 
 - **Get** — Retrieve a full execution trace with spans
 - **List** — List recent traces
-- **Get Summary** — Get aggregated trace statistics
 
 ### Cost
 
