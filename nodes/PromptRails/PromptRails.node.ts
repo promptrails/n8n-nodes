@@ -1,13 +1,13 @@
+import { PromptRails as PromptRailsClient } from '@promptrails/sdk';
 import {
-	IDataObject,
-	IExecuteFunctions,
-	INodeExecutionData,
-	INodeType,
-	INodeTypeDescription,
-	INodePropertyOptions,
+	type IDataObject,
+	type IExecuteFunctions,
+	type INodeExecutionData,
+	type INodePropertyOptions,
+	type INodeType,
+	type INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-import { PromptRails as PromptRailsClient } from '@promptrails/sdk';
 
 // === Operation option groups =============================================
 // These drive the UX (which operations show up per resource). The node
@@ -21,12 +21,23 @@ const agentOperations: INodePropertyOptions[] = [
 		action: 'Execute an agent',
 		description: 'Execute an agent with input variables',
 	},
-	{ name: 'Get', value: 'get', action: 'Get an agent', description: 'Retrieve an agent by ID' },
+	{
+		name: 'Get',
+		value: 'get',
+		action: 'Get an agent',
+		description: 'Retrieve an agent by ID',
+	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List agents',
 		description: 'Retrieve a list of agents',
+	},
+	{
+		name: 'Playground',
+		value: 'playground',
+		action: 'Run an agent in the playground',
+		description: 'Run an agent with an ad-hoc prompt override without saving a version',
 	},
 	{
 		name: 'Preview',
@@ -37,7 +48,12 @@ const agentOperations: INodePropertyOptions[] = [
 ];
 
 const promptOperations: INodePropertyOptions[] = [
-	{ name: 'Get', value: 'get', action: 'Get a prompt', description: 'Retrieve a prompt by ID' },
+	{
+		name: 'Get',
+		value: 'get',
+		action: 'Get a prompt',
+		description: 'Retrieve a prompt by ID',
+	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
@@ -45,10 +61,10 @@ const promptOperations: INodePropertyOptions[] = [
 		description: 'Retrieve a list of prompts',
 	},
 	{
-		name: 'Run',
-		value: 'run',
-		action: 'Run a prompt',
-		description: 'Render and run a prompt template with variables',
+		name: 'Preview',
+		value: 'preview',
+		action: 'Preview a prompt',
+		description: 'Render a prompt template with variables',
 	},
 ];
 
@@ -87,6 +103,30 @@ const chatOperations: INodePropertyOptions[] = [
 
 const executionOperations: INodePropertyOptions[] = [
 	{
+		name: 'Approval Inbox',
+		value: 'approvalInbox',
+		action: 'List executions awaiting approval',
+		description: 'List executions parked at waiting_approval',
+	},
+	{
+		name: 'Approve',
+		value: 'approve',
+		action: 'Approve an execution',
+		description: 'Approve a run parked at waiting_approval and resume it',
+	},
+	{
+		name: 'Cancel',
+		value: 'cancel',
+		action: 'Cancel an execution',
+		description: 'Request cooperative cancellation of a running execution',
+	},
+	{
+		name: 'Deny',
+		value: 'deny',
+		action: 'Deny an execution',
+		description: 'Deny a run parked at waiting_approval and resume with a denial',
+	},
+	{
 		name: 'Get',
 		value: 'get',
 		action: 'Get an execution',
@@ -97,6 +137,12 @@ const executionOperations: INodePropertyOptions[] = [
 		value: 'getMany',
 		action: 'List executions',
 		description: 'Retrieve a list of executions',
+	},
+	{
+		name: 'Tree',
+		value: 'tree',
+		action: 'Get an execution tree',
+		description: 'Retrieve an execution with its full children tree populated',
 	},
 ];
 
@@ -122,36 +168,23 @@ const dataSourceOperations: INodePropertyOptions[] = [
 ];
 
 const traceOperations: INodePropertyOptions[] = [
-	{ name: 'Get', value: 'get', action: 'Get a trace', description: 'Retrieve a trace by trace ID' },
+	{
+		name: 'Get',
+		value: 'get',
+		action: 'Get a trace',
+		description: 'Retrieve a trace by trace ID',
+	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
 		action: 'List traces',
 		description: 'Retrieve a list of traces',
 	},
-];
-
-const costOperations: INodePropertyOptions[] = [
 	{
-		name: 'Agent Summary',
-		value: 'agentSummary',
-		action: 'Get agent cost summary',
-		description: 'Cost breakdown for a specific agent',
-	},
-	{
-		name: 'Workspace Summary',
-		value: 'workspaceSummary',
-		action: 'Get workspace cost summary',
-		description: 'Total LLM usage costs for the workspace',
-	},
-];
-
-const mediaStudioOperations: INodePropertyOptions[] = [
-	{
-		name: 'Generate',
-		value: 'generate',
-		action: 'Generate media',
-		description: 'Run a media generation request',
+		name: 'Summary',
+		value: 'summary',
+		action: 'Get a trace summary',
+		description: 'Aggregate statistics over a filtered set of traces',
 	},
 ];
 
@@ -162,7 +195,12 @@ const assetOperations: INodePropertyOptions[] = [
 		action: 'Delete an asset',
 		description: 'Permanently delete an asset',
 	},
-	{ name: 'Get', value: 'get', action: 'Get an asset', description: 'Retrieve an asset by ID' },
+	{
+		name: 'Get',
+		value: 'get',
+		action: 'Get an asset',
+		description: 'Retrieve an asset by ID',
+	},
 	{
 		name: 'Get Many',
 		value: 'getMany',
@@ -174,15 +212,6 @@ const assetOperations: INodePropertyOptions[] = [
 		value: 'getSignedUrl',
 		action: 'Get a signed URL',
 		description: 'Generate a time-limited download URL for an asset',
-	},
-];
-
-const mediaModelOperations: INodePropertyOptions[] = [
-	{
-		name: 'Get Many',
-		value: 'getMany',
-		action: 'List media models',
-		description: 'Retrieve a list of media models',
 	},
 ];
 
@@ -219,11 +248,8 @@ export class PromptRails implements INodeType {
 					{ name: 'Agent', value: 'agent' },
 					{ name: 'Asset', value: 'asset' },
 					{ name: 'Chat', value: 'chat' },
-					{ name: 'Cost', value: 'cost' },
 					{ name: 'Data Source', value: 'dataSource' },
 					{ name: 'Execution', value: 'execution' },
-					{ name: 'Media Model', value: 'mediaModel' },
-					{ name: 'Media Studio', value: 'mediaStudio' },
 					{ name: 'Prompt', value: 'prompt' },
 					{ name: 'Trace', value: 'trace' },
 				],
@@ -247,7 +273,7 @@ export class PromptRails implements INodeType {
 				noDataExpression: true,
 				displayOptions: { show: { resource: ['prompt'] } },
 				options: promptOperations,
-				default: 'run',
+				default: 'preview',
 			},
 			{
 				displayName: 'Operation',
@@ -290,35 +316,8 @@ export class PromptRails implements INodeType {
 				name: 'operation',
 				type: 'options',
 				noDataExpression: true,
-				displayOptions: { show: { resource: ['cost'] } },
-				options: costOperations,
-				default: 'workspaceSummary',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: { show: { resource: ['mediaStudio'] } },
-				options: mediaStudioOperations,
-				default: 'generate',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
 				displayOptions: { show: { resource: ['asset'] } },
 				options: assetOperations,
-				default: 'getMany',
-			},
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: { show: { resource: ['mediaModel'] } },
-				options: mediaModelOperations,
 				default: 'getMany',
 			},
 
@@ -333,7 +332,7 @@ export class PromptRails implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['agent'],
-						operation: ['execute', 'get', 'preview'],
+						operation: ['execute', 'get', 'preview', 'playground'],
 					},
 				},
 			},
@@ -346,7 +345,21 @@ export class PromptRails implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['agent'],
-						operation: ['execute', 'preview'],
+						operation: ['execute', 'preview', 'playground'],
+					},
+				},
+			},
+			{
+				displayName: 'Prompt Override (JSON)',
+				name: 'promptOverride',
+				type: 'json',
+				default: '{}',
+				description:
+					'Ad-hoc prompt override as a JSON object (may carry system_prompt, user_prompt, input_schema)',
+				displayOptions: {
+					show: {
+						resource: ['agent'],
+						operation: ['playground'],
 					},
 				},
 			},
@@ -355,11 +368,11 @@ export class PromptRails implements INodeType {
 				name: 'versionId',
 				type: 'string',
 				default: '',
-				description: 'Specific version ID to preview (optional)',
+				description: 'Specific version ID to use (optional)',
 				displayOptions: {
 					show: {
 						resource: ['agent'],
-						operation: ['preview'],
+						operation: ['preview', 'playground'],
 					},
 				},
 			},
@@ -375,7 +388,7 @@ export class PromptRails implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['prompt'],
-						operation: ['get', 'run'],
+						operation: ['get', 'preview'],
 					},
 				},
 			},
@@ -388,7 +401,20 @@ export class PromptRails implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['prompt'],
-						operation: ['run'],
+						operation: ['preview'],
+					},
+				},
+			},
+			{
+				displayName: 'Version ID',
+				name: 'promptVersionId',
+				type: 'string',
+				default: '',
+				description: 'Specific prompt version ID to preview (optional)',
+				displayOptions: {
+					show: {
+						resource: ['prompt'],
+						operation: ['preview'],
 					},
 				},
 			},
@@ -449,7 +475,20 @@ export class PromptRails implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['execution'],
-						operation: ['get'],
+						operation: ['get', 'tree', 'cancel', 'approve', 'deny'],
+					},
+				},
+			},
+			{
+				displayName: 'Reason',
+				name: 'reason',
+				type: 'string',
+				default: '',
+				description: 'Optional reason recorded with the decision',
+				displayOptions: {
+					show: {
+						resource: ['execution'],
+						operation: ['approve', 'deny'],
 					},
 				},
 			},
@@ -498,120 +537,17 @@ export class PromptRails implements INodeType {
 					},
 				},
 			},
-
-			// ------ Cost fields ------
 			{
-				displayName: 'Agent ID',
-				name: 'agentId',
-				type: 'string',
-				required: true,
-				default: '',
-				description: 'The agent ID for cost summary',
-				displayOptions: {
-					show: {
-						resource: ['cost'],
-						operation: ['agentSummary'],
-					},
-				},
-			},
-
-			// ------ Media Studio fields ------
-			{
-				displayName: 'Provider',
-				name: 'provider',
-				type: 'options',
-				required: true,
-				default: '',
-				description: 'The media provider to use',
-				options: [
-					{ name: 'Deepgram', value: 'deepgram' },
-					{ name: 'ElevenLabs', value: 'elevenlabs' },
-					{ name: 'Fal', value: 'fal' },
-					{ name: 'Replicate', value: 'replicate' },
-					{ name: 'Runway', value: 'runway' },
-					{ name: 'Stability', value: 'stability' },
-				],
-				displayOptions: {
-					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
-					},
-				},
-			},
-			{
-				displayName: 'Media Type',
-				name: 'mediaType',
-				type: 'options',
-				required: true,
-				default: '',
-				description: 'The type of media to generate',
-				options: [
-					{ name: 'Image Edit', value: 'image_edit' },
-					{ name: 'Image Generation', value: 'image_gen' },
-					{ name: 'Speech to Text', value: 'stt' },
-					{ name: 'Text to Speech', value: 'tts' },
-					{ name: 'Video from Image', value: 'video_from_img' },
-					{ name: 'Video Generation', value: 'video_gen' },
-				],
-				displayOptions: {
-					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
-					},
-				},
-			},
-			{
-				displayName: 'Model',
-				name: 'model',
-				type: 'string',
-				required: true,
-				default: '',
-				description: 'The model identifier to use',
-				displayOptions: {
-					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
-					},
-				},
-			},
-			{
-				displayName: 'Prompt',
-				name: 'prompt',
-				type: 'string',
-				typeOptions: { rows: 4 },
-				required: true,
-				default: '',
-				description: 'The prompt for media generation',
-				displayOptions: {
-					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
-					},
-				},
-			},
-			{
-				displayName: 'Input URL',
-				name: 'inputUrl',
-				type: 'string',
-				default: '',
-				description: 'URL of the input media file (optional, for edits or transformations)',
-				displayOptions: {
-					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
-					},
-				},
-			},
-			{
-				displayName: 'Config (JSON)',
-				name: 'config',
+				displayName: 'Filters (JSON)',
+				name: 'traceFilters',
 				type: 'json',
-				default: '',
-				description: 'Additional configuration as a JSON object (optional)',
+				default: '{}',
+				description:
+					'Optional filters as a JSON object (e.g. date_from, date_to, status, model_name, agent_id, session_id, execution_id)',
 				displayOptions: {
 					show: {
-						resource: ['mediaStudio'],
-						operation: ['generate'],
+						resource: ['trace'],
+						operation: ['summary'],
 					},
 				},
 			},
@@ -684,52 +620,6 @@ export class PromptRails implements INodeType {
 				},
 			},
 
-			// ------ Media Model fields ------
-			{
-				displayName: 'Provider',
-				name: 'mediaModelProvider',
-				type: 'string',
-				default: '',
-				description: 'Filter media models by provider',
-				displayOptions: {
-					show: {
-						resource: ['mediaModel'],
-						operation: ['getMany'],
-					},
-				},
-			},
-			{
-				displayName: 'Media Type',
-				name: 'mediaModelMediaType',
-				type: 'string',
-				default: '',
-				description: 'Filter media models by media type (e.g. tts, stt, image_gen)',
-				displayOptions: {
-					show: {
-						resource: ['mediaModel'],
-						operation: ['getMany'],
-					},
-				},
-			},
-			{
-				displayName: 'Is Active',
-				name: 'mediaModelIsActive',
-				type: 'options',
-				default: '',
-				description: 'Filter media models by active status',
-				options: [
-					{ name: 'All', value: '' },
-					{ name: 'Active', value: 'true' },
-					{ name: 'Inactive', value: 'false' },
-				],
-				displayOptions: {
-					show: {
-						resource: ['mediaModel'],
-						operation: ['getMany'],
-					},
-				},
-			},
-
 			// ------ Pagination (shared) ------
 			{
 				displayName: 'Limit',
@@ -743,7 +633,7 @@ export class PromptRails implements INodeType {
 				},
 				displayOptions: {
 					show: {
-						operation: ['getMany', 'listSessions', 'listMessages'],
+						operation: ['getMany', 'listSessions', 'listMessages', 'approvalInbox'],
 					},
 				},
 			},
@@ -758,7 +648,7 @@ export class PromptRails implements INodeType {
 				},
 				displayOptions: {
 					show: {
-						operation: ['getMany', 'listSessions', 'listMessages'],
+						operation: ['getMany', 'listSessions', 'listMessages', 'approvalInbox'],
 					},
 				},
 			},
@@ -787,7 +677,9 @@ export class PromptRails implements INodeType {
 					});
 					continue;
 				}
-				throw new NodeOperationError(this.getNode(), err as Error, { itemIndex: i });
+				throw new NodeOperationError(this.getNode(), err as Error, {
+					itemIndex: i,
+				});
 			}
 		}
 
@@ -818,14 +710,8 @@ async function dispatch(
 			return handleDataSource(ctx, client, operation, i);
 		case 'trace':
 			return handleTrace(ctx, client, operation, i);
-		case 'cost':
-			return handleCost(ctx, client, operation, i);
-		case 'mediaStudio':
-			return handleMediaStudio(ctx, client, operation, i);
 		case 'asset':
 			return handleAsset(ctx, client, operation, i);
-		case 'mediaModel':
-			return handleMediaModel(ctx, client, operation, i);
 		default:
 			throw new Error(`unknown resource: ${resource}`);
 	}
@@ -875,7 +761,24 @@ async function handleAgent(
 			const agentId = ctx.getNodeParameter('agentId', i) as string;
 			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
 			const versionId = (ctx.getNodeParameter('versionId', i, '') as string) || undefined;
-			return client.agents.preview(agentId, { input: variables, version_id: versionId });
+			return client.agents.preview(agentId, {
+				input: variables,
+				version_id: versionId,
+			});
+		}
+		case 'playground': {
+			const agentId = ctx.getNodeParameter('agentId', i) as string;
+			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
+			const promptOverride = parseJson(
+				ctx.getNodeParameter('promptOverride', i, {}),
+				'Prompt Override',
+			);
+			const versionId = (ctx.getNodeParameter('versionId', i, '') as string) || undefined;
+			return client.agents.playground(agentId, {
+				input: variables,
+				prompt_override: promptOverride,
+				version_id: versionId,
+			});
 		}
 		case 'get':
 			return client.agents.get(ctx.getNodeParameter('agentId', i) as string);
@@ -897,15 +800,13 @@ async function handlePrompt(
 			return client.prompts.get(ctx.getNodeParameter('promptId', i) as string);
 		case 'getMany':
 			return client.prompts.list(pagination(ctx, i));
-		case 'run': {
+		case 'preview': {
 			const promptId = ctx.getNodeParameter('promptId', i) as string;
 			const variables = parseJson(ctx.getNodeParameter('variables', i, {}), 'Variables');
-			// The backend renders the prompt from its stored body when
-			// user_prompt is left empty; variables feed Jinja.
-			return client.prompts.runPrompt(promptId, {
-				user_prompt: '',
-				llm_model_id: '',
+			const versionId = (ctx.getNodeParameter('promptVersionId', i, '') as string) || undefined;
+			return client.prompts.preview(promptId, {
 				input: variables,
+				version_id: versionId,
 			});
 		}
 		default:
@@ -953,6 +854,22 @@ async function handleExecution(
 			return client.executions.get(ctx.getNodeParameter('executionId', i) as string);
 		case 'getMany':
 			return client.executions.list(pagination(ctx, i));
+		case 'tree':
+			return client.executions.tree(ctx.getNodeParameter('executionId', i) as string);
+		case 'cancel':
+			return client.executions.cancel(ctx.getNodeParameter('executionId', i) as string);
+		case 'approvalInbox':
+			return client.executions.approvalInbox(pagination(ctx, i));
+		case 'approve': {
+			const executionId = ctx.getNodeParameter('executionId', i) as string;
+			const reason = (ctx.getNodeParameter('reason', i, '') as string) || undefined;
+			return client.executions.approve(executionId, { reason });
+		}
+		case 'deny': {
+			const executionId = ctx.getNodeParameter('executionId', i) as string;
+			const reason = (ctx.getNodeParameter('reason', i, '') as string) || undefined;
+			return client.executions.deny(executionId, { reason });
+		}
 		default:
 			throw new Error(`unknown execution operation: ${op}`);
 	}
@@ -993,50 +910,13 @@ async function handleTrace(
 			return client.traces.getByTraceId(ctx.getNodeParameter('traceId', i) as string);
 		case 'getMany':
 			return client.traces.list(pagination(ctx, i));
+		case 'summary': {
+			const filters = parseJson(ctx.getNodeParameter('traceFilters', i, {}), 'Filters');
+			return client.traces.getSummary(filters as Record<string, string | number>);
+		}
 		default:
 			throw new Error(`unknown trace operation: ${op}`);
 	}
-}
-
-async function handleCost(
-	ctx: IExecuteFunctions,
-	client: PromptRailsClient,
-	op: string,
-	i: number,
-): Promise<unknown> {
-	switch (op) {
-		case 'workspaceSummary':
-			return client.costs.getSummary();
-		case 'agentSummary':
-			return client.costs.getAgentSummary(ctx.getNodeParameter('agentId', i) as string);
-		default:
-			throw new Error(`unknown cost operation: ${op}`);
-	}
-}
-
-async function handleMediaStudio(
-	ctx: IExecuteFunctions,
-	client: PromptRailsClient,
-	op: string,
-	i: number,
-): Promise<unknown> {
-	if (op !== 'generate') {
-		throw new Error(`unknown media studio operation: ${op}`);
-	}
-	const provider = ctx.getNodeParameter('provider', i) as string;
-	const mediaType = ctx.getNodeParameter('mediaType', i) as string;
-	const model = ctx.getNodeParameter('model', i) as string;
-	const prompt = ctx.getNodeParameter('prompt', i) as string;
-	const inputUrl = (ctx.getNodeParameter('inputUrl', i, '') as string) || undefined;
-	const config = parseJson(ctx.getNodeParameter('config', i, {}), 'Config');
-	return client.media.generate({
-		provider,
-		media_type: mediaType,
-		model,
-		prompt,
-		input_url: inputUrl,
-		config,
-	});
 }
 
 async function handleAsset(
@@ -1071,25 +951,6 @@ async function handleAsset(
 	}
 }
 
-async function handleMediaModel(
-	ctx: IExecuteFunctions,
-	client: PromptRailsClient,
-	op: string,
-	i: number,
-): Promise<unknown> {
-	if (op !== 'getMany') {
-		throw new Error(`unknown media model operation: ${op}`);
-	}
-	const params: Record<string, unknown> = pagination(ctx, i);
-	const provider = (ctx.getNodeParameter('mediaModelProvider', i, '') as string) || '';
-	const mediaType = (ctx.getNodeParameter('mediaModelMediaType', i, '') as string) || '';
-	const isActive = (ctx.getNodeParameter('mediaModelIsActive', i, '') as string) || '';
-	if (provider) params.provider = provider;
-	if (mediaType) params.media_type = mediaType;
-	if (isActive) params.is_active = isActive === 'true';
-	return client.mediaModels.list(params as Parameters<typeof client.mediaModels.list>[0]);
-}
-
 // === Output shaping ======================================================
 
 function pushResult(out: INodeExecutionData[], result: unknown, itemIndex: number): void {
@@ -1105,7 +966,10 @@ function pushResult(out: INodeExecutionData[], result: unknown, itemIndex: numbe
 		const { data, meta } = result as { data: unknown; meta: unknown };
 		if (Array.isArray(data)) {
 			if (data.length === 0) {
-				out.push({ json: { meta } as IDataObject, pairedItem: { item: itemIndex } });
+				out.push({
+					json: { meta } as IDataObject,
+					pairedItem: { item: itemIndex },
+				});
 				return;
 			}
 			for (const row of data) {
