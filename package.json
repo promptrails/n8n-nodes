@@ -1,7 +1,7 @@
 {
 	"name": "@promptrails/n8n-nodes-promptrails",
-	"version": "0.3.1",
-	"description": "PromptRails nodes for n8n — execute agents, run prompts, manage chat sessions, and more",
+	"version": "0.4.0",
+	"description": "PromptRails nodes for n8n — execute agents, preview prompts, manage chat sessions, and more",
 	"keywords": [
 		"n8n-community-node-package"
 	],
@@ -40,7 +40,7 @@
 		]
 	},
 	"dependencies": {
-		"@promptrails/sdk": "^0.5.0"
+		"@promptrails/sdk": "^0.9.0"
 	},
 	"devDependencies": {
 		"@typescript-eslint/parser": "~8.32.0",

@@ -1,6 +1,6 @@
 # n8n-nodes-promptrails
 
-[n8n](https://n8n.io/) community node for [PromptRails](https://promptrails.ai) — execute AI agents, run prompts, manage chat sessions, query data sources, and more from your n8n workflows.
+[n8n](https://n8n.io/) community node for [PromptRails](https://promptrails.ai) — execute AI agents, preview prompts, manage chat sessions, query data sources, and more from your n8n workflows.
 
 ## Installation
 
@@ -24,24 +24,25 @@ You need a PromptRails API key to use this node:
 
 | Resource | Operations |
 |----------|------------|
-| **Agent** | Execute, Preview, Get, List |
-| **Prompt** | Run, Get, List |
+| **Agent** | Execute, Playground, Preview, Get, List |
+| **Prompt** | Preview, Get, List |
 | **Chat** | Create Session, Send Message, Get Session, List Sessions, List Messages |
-| **Execution** | Get, List |
+| **Execution** | Get, List, Tree, Cancel, Approval Inbox, Approve, Deny |
 | **Data Source** | Query, Get, List |
-| **Trace** | Get, List |
-| **Cost** | Workspace Summary, Agent Summary |
+| **Trace** | Get, List, Summary |
+| **Asset** | Get, List, Delete, Get Signed URL |
 
 ### Agent
 
 - **Execute** — Run an agent with input variables and get the result
+- **Playground** — Run an agent with an ad-hoc prompt override without saving a version
 - **Preview** — Test a specific agent version before promoting
 - **Get** — Retrieve agent details by ID
 - **List** — List all agents in the workspace
 
 ### Prompt
 
-- **Run** — Execute a prompt template with variables
+- **Preview** — Render a prompt template with variables
 - **Get** — Retrieve prompt details by ID
 - **List** — List all prompts in the workspace
 
@@ -63,16 +64,24 @@ You need a PromptRails API key to use this node:
 
 - **Get** — Retrieve execution details and results
 - **List** — List execution history
+- **Tree** — Retrieve an execution with its full children tree populated
+- **Cancel** — Request cooperative cancellation of a running execution
+- **Approval Inbox** — List executions parked at `waiting_approval`
+- **Approve** — Approve a run parked at `waiting_approval` and resume it
+- **Deny** — Deny a run parked at `waiting_approval` and resume with a denial
 
 ### Trace
 
 - **Get** — Retrieve a full execution trace with spans
 - **List** — List recent traces
+- **Summary** — Aggregate statistics over a filtered set of traces
 
-### Cost
+### Asset
 
-- **Workspace Summary** — Total LLM usage costs for the workspace
-- **Agent Summary** — Cost breakdown for a specific agent
+- **Get** — Retrieve asset details by ID
+- **List** — List assets (filter by type, provider, execution, or agent)
+- **Delete** — Permanently delete an asset
+- **Get Signed URL** — Generate a time-limited download URL for an asset
 
 ## Example Workflows
 
@@ -91,7 +100,7 @@ You need a PromptRails API key to use this node:
 ### Monitor Costs
 
 1. **Schedule Trigger** — Run daily
-2. **PromptRails** — Get workspace cost summary
+2. **PromptRails** — Get a trace summary (total cost, tokens, error count)
 3. **IF** — Check if costs exceed threshold
 4. **Email** — Send alert if over budget
 
