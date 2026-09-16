@@ -5,5 +5,5 @@ credentials/
 tsconfig.json
 gulpfile.js
 .eslintrc.*
-.prettierrc.*
+biome.json
 .editorconfig

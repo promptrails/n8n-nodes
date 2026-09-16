@@ -22,9 +22,12 @@
 	"scripts": {
 		"build": "npx rimraf dist && tsc && gulp build:icons",
 		"dev": "tsc --watch",
-		"format": "prettier \"nodes/**/*.ts\" \"credentials/**/*.ts\" --write",
-		"lint": "eslint --ext .ts nodes credentials && eslint package.json",
-		"lintfix": "eslint --ext .ts nodes credentials --fix && eslint package.json --fix",
+		"format": "biome format --write .",
+		"check": "biome check .",
+		"check:fix": "biome check --write .",
+		"lint": "npm run check && npm run lint:n8n",
+		"lint:n8n": "eslint --ext .ts nodes credentials && eslint package.json",
+		"lintfix": "npm run check:fix && eslint --ext .ts nodes credentials --fix && eslint package.json --fix",
 		"prepublishOnly": "npm run build && npm run lint"
 	},
 	"files": [
@@ -43,11 +46,11 @@
 		"@promptrails/sdk": "^0.9.0"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "2.5.14",
 		"@typescript-eslint/parser": "~8.70.0",
 		"eslint": "^8.57.0",
 		"eslint-plugin-n8n-nodes-base": "^1.16.3",
 		"gulp": "^5.0.0",
-		"prettier": "^3.5.3",
 		"typescript": "^5.8.2"
 	},
 	"peerDependencies": {
