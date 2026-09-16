@@ -1,8 +1,8 @@
-import {
-	ICredentialType,
-	INodeProperties,
+import type {
 	IAuthenticateGeneric,
 	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
 } from 'n8n-workflow';
 
 export class PromptRailsApi implements ICredentialType {
