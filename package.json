@@ -1,6 +1,6 @@
 {
 	"name": "@promptrails/n8n-nodes-promptrails",
-	"version": "0.4.0",
+	"version": "0.4.1",
 	"description": "PromptRails nodes for n8n — execute agents, preview prompts, manage chat sessions, and more",
 	"keywords": [
 		"n8n-community-node-package"
