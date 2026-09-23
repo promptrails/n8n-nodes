@@ -107,10 +107,17 @@ You need a PromptRails API key to use this node:
 ## Development
 
 ```bash
-npm install
+nvm use                      # Node 22, the version CI builds with
+npm ci --ignore-scripts
 npm run build
-npm run dev    # watch mode
+npm run dev                  # watch mode
 ```
+
+`--ignore-scripts` skips one native build. `n8n-workflow` is a peer
+dependency, npm installs it, and it pulls in `isolated-vm`, which does not
+compile against the V8 in current Node releases. Nothing here ever runs it —
+the peer is needed for its types — so the binary is not worth having, and
+`npm install` without the flag fails on Node 23 and newer.
 
 ## License
 

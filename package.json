@@ -20,6 +20,7 @@
 	},
 	"main": "index.js",
 	"scripts": {
+		"setup": "npm ci --ignore-scripts",
 		"build": "npx rimraf dist && tsc && gulp build:icons",
 		"dev": "tsc --watch",
 		"format": "biome format --write .",
