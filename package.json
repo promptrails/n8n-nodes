@@ -55,5 +55,10 @@
 	},
 	"peerDependencies": {
 		"n8n-workflow": "*"
+	},
+	"overrides": {
+		"lodash": "^4.18.1",
+		"form-data": "^4.0.6",
+		"uuid": "^11.1.1"
 	}
 }
