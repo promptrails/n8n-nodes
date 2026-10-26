@@ -5,7 +5,6 @@
 ## Installation
 
 In your n8n instance:
-
 1. Go to **Settings > Community Nodes**
 2. Select **Install a community node**
 3. Enter `@promptrails/n8n-nodes-promptrails`
@@ -14,7 +13,6 @@ In your n8n instance:
 ## Credentials
 
 You need a PromptRails API key to use this node:
-
 1. Log in to [PromptRails](https://promptrails.ai)
 2. Go to **Settings > API Keys**
 3. Create a new API key with the required scopes
@@ -22,15 +20,15 @@ You need a PromptRails API key to use this node:
 
 ## Resources & Operations
 
-| Resource | Operations |
-|----------|------------|
-| **Agent** | Execute, Playground, Preview, Get, List |
-| **Prompt** | Preview, Get, List |
-| **Chat** | Create Session, Send Message, Get Session, List Sessions, List Messages |
-| **Execution** | Get, List, Tree, Cancel, Approval Inbox, Approve, Deny |
-| **Data Source** | Query, Get, List |
-| **Trace** | Get, List, Summary |
-| **Asset** | Get, List, Delete, Get Signed URL |
+| Resource        | Operations                                                              |
+| --------------- | ----------------------------------------------------------------------- |
+| **Agent**       | Execute, Playground, Preview, Get, List                                 |
+| **Prompt**      | Preview, Get, List                                                      |
+| **Chat**        | Create Session, Send Message, Get Session, List Sessions, List Messages |
+| **Execution**   | Get, List, Tree, Cancel, Approval Inbox, Approve, Deny                  |
+| **Data Source** | Query, Get, List                                                        |
+| **Trace**       | Get, List, Summary                                                      |
+| **Asset**       | Get, List, Delete, Get Signed URL                                       |
 
 ### Agent
 
