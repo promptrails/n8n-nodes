@@ -47,7 +47,7 @@
 		"@promptrails/sdk": "^0.9.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.6.4",
+		"@biomejs/biome": "2.6.5",
 		"@typescript-eslint/parser": "~8.72.0",
 		"eslint": "^8.57.0",
 		"eslint-plugin-n8n-nodes-base": "^1.16.3",
